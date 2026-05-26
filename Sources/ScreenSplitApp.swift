@@ -178,8 +178,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         gapsMenu = NSMenu()
         let gapOptions = [
             (title: "None (0px)", value: 0),
-            (title: "Small (8px)", value: 8),
-            (title: "Large (16px)", value: 16)
+            (title: "Small (4px)", value: 4),
+            (title: "Medium (8px)", value: 8),
+            (title: "Large (12px)", value: 12)
         ]
         for opt in gapOptions {
             let item = NSMenuItem(title: opt.title, action: #selector(setGap(_:)), keyEquivalent: "")
