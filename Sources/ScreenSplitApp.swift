@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import ServiceManagement
+import Carbon
 
 @main
 struct ScreenSplitApp: App {
@@ -40,13 +41,75 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         overlayWindowController = GridOverlayWindowController()
         
-        hotkeyManager = HotkeyManager { [weak self] in
+        hotkeyManager = HotkeyManager()
+        
+        // 1. Show Grid: Cmd+G
+        hotkeyManager?.register(keyCode: 5, modifiers: UInt32(cmdKey), id: 1) { [weak self] in
             self?.toggleOverlay()
+        }
+        
+        // 2. Snap Left Half: Ctrl+Option+Left Arrow
+        hotkeyManager?.register(keyCode: 123, modifiers: UInt32(controlKey | optionKey), id: 2) {
+            if let window = WindowManager.shared.getFrontmostWindow() {
+                WindowManager.shared.snapWindow(window, action: .leftHalf)
+            }
+        }
+        
+        // 3. Snap Right Half: Ctrl+Option+Right Arrow
+        hotkeyManager?.register(keyCode: 124, modifiers: UInt32(controlKey | optionKey), id: 3) {
+            if let window = WindowManager.shared.getFrontmostWindow() {
+                WindowManager.shared.snapWindow(window, action: .rightHalf)
+            }
+        }
+        
+        // 4. Snap Top Half: Ctrl+Option+Up Arrow
+        hotkeyManager?.register(keyCode: 126, modifiers: UInt32(controlKey | optionKey), id: 4) {
+            if let window = WindowManager.shared.getFrontmostWindow() {
+                WindowManager.shared.snapWindow(window, action: .topHalf)
+            }
+        }
+        
+        // 5. Snap Bottom Half: Ctrl+Option+Down Arrow
+        hotkeyManager?.register(keyCode: 125, modifiers: UInt32(controlKey | optionKey), id: 5) {
+            if let window = WindowManager.shared.getFrontmostWindow() {
+                WindowManager.shared.snapWindow(window, action: .bottomHalf)
+            }
+        }
+        
+        // 6. Maximize: Ctrl+Option+Enter
+        hotkeyManager?.register(keyCode: 36, modifiers: UInt32(controlKey | optionKey), id: 6) {
+            if let window = WindowManager.shared.getFrontmostWindow() {
+                WindowManager.shared.snapWindow(window, action: .maximize)
+            }
+        }
+        
+        // 7. Center & Float: Ctrl+Option+C
+        hotkeyManager?.register(keyCode: 8, modifiers: UInt32(controlKey | optionKey), id: 7) {
+            if let window = WindowManager.shared.getFrontmostWindow() {
+                WindowManager.shared.snapWindow(window, action: .centerFloat)
+            }
+        }
+        
+        // 8. Throw Next Screen: Ctrl+Option+Cmd+Right Arrow
+        hotkeyManager?.register(keyCode: 124, modifiers: UInt32(controlKey | optionKey | cmdKey), id: 8) {
+            if let window = WindowManager.shared.getFrontmostWindow() {
+                WindowManager.shared.throwWindowToNextScreen(window, forward: true)
+            }
+        }
+        
+        // 9. Throw Previous Screen: Ctrl+Option+Cmd+Left Arrow
+        hotkeyManager?.register(keyCode: 123, modifiers: UInt32(controlKey | optionKey | cmdKey), id: 9) {
+            if let window = WindowManager.shared.getFrontmostWindow() {
+                WindowManager.shared.throwWindowToNextScreen(window, forward: false)
+            }
         }
     }
     
     var columnsMenu: NSMenu!
     var rowsMenu: NSMenu!
+    var gapsMenu: NSMenu!
+    var workspacesMenu: NSMenu!
+    var deleteWorkspacesMenu: NSMenu!
     var launchAtStartupItem: NSMenuItem!
     
     func setupMenu() {
@@ -110,8 +173,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         templatesItem.submenu = templatesMenu
         configMenu.addItem(templatesItem)
         
+        // Window Gaps Configuration
+        let gapsItem = NSMenuItem(title: "Window Gaps", action: nil, keyEquivalent: "")
+        gapsMenu = NSMenu()
+        let gapOptions = [
+            (title: "None (0px)", value: 0),
+            (title: "Small (8px)", value: 8),
+            (title: "Large (16px)", value: 16)
+        ]
+        for opt in gapOptions {
+            let item = NSMenuItem(title: opt.title, action: #selector(setGap(_:)), keyEquivalent: "")
+            item.tag = opt.value
+            item.target = self
+            gapsMenu.addItem(item)
+        }
+        gapsItem.submenu = gapsMenu
+        configMenu.addItem(gapsItem)
+        
         configItem.submenu = configMenu
         menu.addItem(configItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // Workspaces Menu
+        let workspacesItem = NSMenuItem(title: "Workspaces", action: nil, keyEquivalent: "")
+        workspacesMenu = NSMenu()
+        
+        let saveWorkspaceItem = NSMenuItem(title: "Save Current Workspace...", action: #selector(saveWorkspaceAction), keyEquivalent: "")
+        saveWorkspaceItem.target = self
+        workspacesMenu.addItem(saveWorkspaceItem)
+        
+        let deleteWorkspaceItem = NSMenuItem(title: "Delete Workspace", action: nil, keyEquivalent: "")
+        deleteWorkspacesMenu = NSMenu()
+        deleteWorkspaceItem.submenu = deleteWorkspacesMenu
+        workspacesMenu.addItem(deleteWorkspaceItem)
+        
+        workspacesMenu.addItem(NSMenuItem.separator())
+        
+        workspacesItem.submenu = workspacesMenu
+        menu.addItem(workspacesItem)
         
         menu.addItem(NSMenuItem.separator())
         
@@ -164,9 +264,83 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    @objc func setGap(_ sender: NSMenuItem) {
+        UserDefaults.standard.set(sender.tag, forKey: "GridGapConfig")
+        updateMenuStates()
+    }
+    
+    @objc func saveWorkspaceAction() {
+        promptForWorkspaceName { [weak self] name in
+            guard let self = self, let name = name else { return }
+            
+            let windows = WindowManager.shared.captureWorkspace()
+            let newWorkspace = WorkspaceSnapshot(name: name, windows: windows)
+            
+            var workspaces = self.loadWorkspaces()
+            workspaces[name] = newWorkspace
+            
+            if let data = try? JSONEncoder().encode(workspaces) {
+                UserDefaults.standard.set(data, forKey: "WorkspaceSnapshots")
+            }
+            
+            self.updateMenuStates()
+        }
+    }
+    
+    @objc func deleteWorkspaceAction(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        
+        var workspaces = loadWorkspaces()
+        workspaces.removeValue(forKey: name)
+        
+        if let data = try? JSONEncoder().encode(workspaces) {
+            UserDefaults.standard.set(data, forKey: "WorkspaceSnapshots")
+        }
+        
+        updateMenuStates()
+    }
+    
+    @objc func restoreWorkspaceAction(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        let workspaces = loadWorkspaces()
+        if let workspace = workspaces[name] {
+            WindowManager.shared.restoreWorkspace(workspace)
+        }
+    }
+    
+    func loadWorkspaces() -> [String: WorkspaceSnapshot] {
+        guard let data = UserDefaults.standard.data(forKey: "WorkspaceSnapshots") else { return [:] }
+        return (try? JSONDecoder().decode([String: WorkspaceSnapshot].self, from: data)) ?? [:]
+    }
+    
+    func promptForWorkspaceName(completion: @escaping (String?) -> Void) {
+        let alert = NSAlert()
+        alert.messageText = "Save Workspace Snapshot"
+        alert.informativeText = "Enter a name for this workspace snapshot:"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Cancel")
+        
+        let inputTextField = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        inputTextField.placeholderString = "Coding / Browsing / etc."
+        alert.accessoryView = inputTextField
+        
+        // Force alert to front
+        NSApp.activate(ignoringOtherApps: true)
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            let name = inputTextField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            completion(name.isEmpty ? nil : name)
+        } else {
+            completion(nil)
+        }
+    }
+    
     func updateMenuStates() {
         let cols = UserDefaults.standard.integer(forKey: "GridColumnsConfig")
         let rows = UserDefaults.standard.integer(forKey: "GridRowsConfig")
+        let gaps = UserDefaults.standard.integer(forKey: "GridGapConfig")
         
         for item in columnsMenu.items {
             item.state = (item.tag == cols) ? .on : .off
@@ -176,8 +350,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             item.state = (item.tag == rows) ? .on : .off
         }
         
+        for item in gapsMenu.items {
+            item.state = (item.tag == gaps) ? .on : .off
+        }
+        
         if #available(macOS 13.0, *) {
             launchAtStartupItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        }
+        
+        // Update workspaces menu dynamic items
+        while workspacesMenu.items.count > 3 {
+            workspacesMenu.removeItem(at: 3)
+        }
+        deleteWorkspacesMenu.removeAllItems()
+        
+        let workspaces = loadWorkspaces()
+        if workspaces.isEmpty {
+            let noWorkspacesItem = NSMenuItem(title: "No saved workspaces", action: nil, keyEquivalent: "")
+            noWorkspacesItem.isEnabled = false
+            workspacesMenu.addItem(noWorkspacesItem)
+            
+            let noDeleteWorkspacesItem = NSMenuItem(title: "No saved workspaces", action: nil, keyEquivalent: "")
+            noDeleteWorkspacesItem.isEnabled = false
+            deleteWorkspacesMenu.addItem(noDeleteWorkspacesItem)
+        } else {
+            for name in workspaces.keys.sorted() {
+                let restoreItem = NSMenuItem(title: name, action: #selector(restoreWorkspaceAction(_:)), keyEquivalent: "")
+                restoreItem.representedObject = name
+                restoreItem.target = self
+                workspacesMenu.addItem(restoreItem)
+                
+                let deleteItem = NSMenuItem(title: name, action: #selector(deleteWorkspaceAction(_:)), keyEquivalent: "")
+                deleteItem.representedObject = name
+                deleteItem.target = self
+                deleteWorkspacesMenu.addItem(deleteItem)
+            }
         }
     }
     

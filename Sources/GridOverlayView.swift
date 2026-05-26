@@ -24,11 +24,17 @@ struct GridOverlayView: View {
     @State private var dragStart: CGPoint?
     @State private var localEventMonitor: Any?
     
-    let gridPadding: CGFloat = 0
-    let gridSpacing: CGFloat = 0
-    
     @AppStorage("GridColumnsConfig") private var columnsConfig: Int = 0
     @AppStorage("GridRowsConfig") private var rowsConfig: Int = 0
+    @AppStorage("GridGapConfig") private var gapConfig: Int = 0
+    
+    var gridPadding: CGFloat {
+        return CGFloat(gapConfig)
+    }
+    
+    var gridSpacing: CGFloat {
+        return CGFloat(gapConfig)
+    }
     
     // Dynamic grid size based on screen
     var columns: Int {
@@ -85,8 +91,8 @@ struct GridOverlayView: View {
             }
             
             ZStack {
-                // Background
-                Color.black.opacity(0.4)
+                // Dim the screen slightly but leave gaps mostly transparent
+                Color.black.opacity(0.15)
                 
                 // Grid
                 VStack(spacing: gridSpacing) {
@@ -96,10 +102,15 @@ struct GridOverlayView: View {
                                 Rectangle()
                                     .fill(
                                         (selection?.contains(col: col, row: row) == true)
-                                        ? Color.blue.opacity(0.8)
-                                        : Color.white.opacity(0.2)
+                                        ? Color.blue.opacity(0.85)
+                                        : Color.black.opacity(0.55)
                                     )
-                                    .border(Color.white.opacity(0.5), width: 1)
+                                    .border(
+                                        (selection?.contains(col: col, row: row) == true)
+                                        ? Color.white.opacity(0.8)
+                                        : Color.white.opacity(0.25),
+                                        width: 1
+                                    )
                             }
                         }
                     }
