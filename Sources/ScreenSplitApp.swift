@@ -119,16 +119,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Show Grid (Cmd+G)", action: #selector(toggleOverlay), keyEquivalent: "g"))
+        menu.addItem(NSMenuItem(title: "Show Flow Grid (Cmd+G)", action: #selector(toggleOverlay), keyEquivalent: "g"))
         menu.items.last?.keyEquivalentModifierMask = [.command]
         
         menu.addItem(NSMenuItem.separator())
         
-        // Grid Configuration
-        let configItem = NSMenuItem(title: "Grid Configuration", action: nil, keyEquivalent: "")
+        // Flow Configuration
+        let configItem = NSMenuItem(title: "Flow Configuration", action: nil, keyEquivalent: "")
         let configMenu = NSMenu()
         
-        let columnsItem = NSMenuItem(title: "Columns", action: nil, keyEquivalent: "")
+        let columnsItem = NSMenuItem(title: "Channels", action: nil, keyEquivalent: "")
         columnsMenu = NSMenu()
         for opt in [0, 3, 4, 5, 6] {
             let title = opt == 0 ? "Auto" : "\(opt)"
@@ -140,7 +140,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         columnsItem.submenu = columnsMenu
         configMenu.addItem(columnsItem)
         
-        let rowsItem = NSMenuItem(title: "Rows", action: nil, keyEquivalent: "")
+        let rowsItem = NSMenuItem(title: "Ripples", action: nil, keyEquivalent: "")
         rowsMenu = NSMenu()
         for opt in [0, 3, 4, 5, 6] {
             let title = opt == 0 ? "Auto" : "\(opt)"
@@ -152,20 +152,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         rowsItem.submenu = rowsMenu
         configMenu.addItem(rowsItem)
         
-        let templatesItem = NSMenuItem(title: "Templates", action: nil, keyEquivalent: "")
+        let templatesItem = NSMenuItem(title: "Confluences", action: nil, keyEquivalent: "")
         let templatesMenu = NSMenu()
         
-        let v11 = NSMenuItem(title: "1:1 Vertical", action: #selector(setTemplate(_:)), keyEquivalent: "")
+        let v11 = NSMenuItem(title: "Forked Stream", action: #selector(setTemplate(_:)), keyEquivalent: "")
         v11.representedObject = [2, 1]
         v11.target = self
         templatesMenu.addItem(v11)
         
-        let h11 = NSMenuItem(title: "1:1 Horizontal", action: #selector(setTemplate(_:)), keyEquivalent: "")
+        let h11 = NSMenuItem(title: "Tiered Pools", action: #selector(setTemplate(_:)), keyEquivalent: "")
         h11.representedObject = [1, 2]
         h11.target = self
         templatesMenu.addItem(h11)
         
-        let thirds = NSMenuItem(title: "1:1:1 / 1:2", action: #selector(setTemplate(_:)), keyEquivalent: "")
+        let thirds = NSMenuItem(title: "Trifurcated Delta", action: #selector(setTemplate(_:)), keyEquivalent: "")
         thirds.representedObject = [3, 1]
         thirds.target = self
         templatesMenu.addItem(thirds)
@@ -173,8 +173,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         templatesItem.submenu = templatesMenu
         configMenu.addItem(templatesItem)
         
-        // Window Gaps Configuration
-        let gapsItem = NSMenuItem(title: "Window Gaps", action: nil, keyEquivalent: "")
+        // Window Gaps Configuration (Riverbanks)
+        let gapsItem = NSMenuItem(title: "Riverbanks", action: nil, keyEquivalent: "")
         gapsMenu = NSMenu()
         let gapOptions = [
             (title: "None", value: 0),
