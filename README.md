@@ -29,8 +29,13 @@ Aqueduct is a lightweight, high-performance macOS window manager inspired by the
 
 ## Installation & Usage
 
-Because Aqueduct is not signed with a paid Apple Developer certificate, macOS Gatekeeper may try to restrict it by default. Follow these steps:
+You can install the pre-compiled version of the app or build it from source.
 
+### Option 1: Download Pre-built Release (Recommended)
+1. **Download**: Download the latest `Aqueduct.dmg` from the [Latest Release](https://github.com/rajeev-kl/Aqueduct/releases/latest).
+2. **Install**: Open the DMG and drag `Aqueduct.app` into your `/Applications` folder.
+
+### Option 2: Build from Source
 1. **Build the Binary**:
    Run the build script in your terminal to compile the code and code-sign it with your local keychain certificate:
    ```bash
