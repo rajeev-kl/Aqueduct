@@ -51,8 +51,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Show Grid (Cmd+Control+G)", action: #selector(toggleOverlay), keyEquivalent: "g"))
-        menu.items.last?.keyEquivalentModifierMask = [.command, .control]
+        menu.addItem(NSMenuItem(title: "Show Grid (Cmd+G)", action: #selector(toggleOverlay), keyEquivalent: "g"))
+        menu.items.last?.keyEquivalentModifierMask = [.command]
         
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit ScreenSplit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
